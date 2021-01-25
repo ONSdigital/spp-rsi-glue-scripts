@@ -7,18 +7,14 @@ import time
 import os
 import sys
 
-extension_types = {
-    ".json": "application/json",
-    ".csv": "text/csv"
-}
+extension_types = {".json": "application/json", ".csv": "text/csv"}
 
-region = 'eu-west-2'
+region = "eu-west-2"
 
 
 def get_from_file():
     config_dir = [f for f in os.listdir("./") if f.startswith("glue-python-libs-")][0]
-    filename = os.listdir('./'+config_dir)[0]
-    filepath = './'+config_dir + '/' + os.listdir('./'+config_dir)[0]
+    filepath = "./" + config_dir + "/" + os.listdir("./" + config_dir)[0]
     with open(filepath, "r") as f:
         return f.read()
 
@@ -45,8 +41,9 @@ def read_from_s3(bucket_name, file_name, file_prefix="", file_extension=".json")
     return input_file
 
 
-def save_dataframe_to_csv(dataframe, bucket_name, file_name, file_prefix="",
-                          file_extension=".csv"):
+def save_dataframe_to_csv(
+    dataframe, bucket_name, file_name, file_prefix="", file_extension=".csv"
+):
     """
     This function takes a Dataframe and stores it in a specific bucket.
     :param dataframe: The Dataframe you wish to save - Type: Dataframe.
@@ -63,8 +60,9 @@ def save_dataframe_to_csv(dataframe, bucket_name, file_name, file_prefix="",
     save_to_s3(bucket_name, file_name, data, file_prefix, file_extension)
 
 
-def save_to_s3(bucket_name, output_file_name, output_data, file_prefix="",
-               file_extension=".json"):
+def save_to_s3(
+    bucket_name, output_file_name, output_data, file_prefix="", file_extension=".json"
+):
     """
     This function uploads a specified set of data to the s3 bucket under the given name.
     :param bucket_name: Name of the bucket you wish to upload too - Type: String.
@@ -81,7 +79,8 @@ def save_to_s3(bucket_name, output_file_name, output_data, file_prefix="",
         full_file_name = file_prefix + full_file_name
 
     s3.Object(bucket_name, full_file_name).put(
-        Body=output_data, ContentType=extension_types[file_extension])
+        Body=output_data, ContentType=extension_types[file_extension]
+    )
 
 
 def do_query(client, query, config, execution_context=False):
@@ -100,31 +99,32 @@ def do_query(client, query, config, execution_context=False):
         execution = client.start_query_execution(
             QueryString=query,
             ResultConfiguration=config,
-            QueryExecutionContext=execution_context
+            QueryExecutionContext=execution_context,
         )
     else:
         execution = client.start_query_execution(
-            QueryString=query,
-            ResultConfiguration=config
+            QueryString=query, ResultConfiguration=config
         )
-    execution_id = execution['QueryExecutionId']
+    execution_id = execution["QueryExecutionId"]
 
     # Wait for query to complete
     max_execution = 20
-    state = 'RUNNING'
-    while max_execution > 0 and state in ['RUNNING', 'QUEUED']:
+    state = "RUNNING"
+    while max_execution > 0 and state in ["RUNNING", "QUEUED"]:
         max_execution = max_execution - 1
         # Get query status
         response = client.get_query_execution(QueryExecutionId=execution_id)
-        if 'QueryExecution' in response and \
-                'Status' in response['QueryExecution'] and \
-                'State' in response['QueryExecution']['Status']:
-            state = response['QueryExecution']['Status']['State']
+        if (
+            "QueryExecution" in response
+            and "Status" in response["QueryExecution"]
+            and "State" in response["QueryExecution"]["Status"]
+        ):
+            state = response["QueryExecution"]["Status"]["State"]
 
             # If anything but succeeeded/failed, go back around the loop
-            if state == 'FAILED':
+            if state == "FAILED":
                 return False
-            elif state == 'SUCCEEDED':
+            elif state == "SUCCEEDED":
                 # On success, return the results of the query
                 return client.get_query_results(QueryExecutionId=execution_id)
 
@@ -133,9 +133,9 @@ def do_query(client, query, config, execution_context=False):
 
 
 def ingest(config, snapshot_location_bucket, snapshot_location_key):
-    snapshot_location_key = snapshot_location_key.replace('.json','')
-    survey_nodes = read_from_s3(config['SnapshotLocation'], 'snapshot')
-    #print(survey_nodes)
+    snapshot_location_key = snapshot_location_key.replace(".json", "")
+    survey_nodes = read_from_s3(config["SnapshotLocation"], "snapshot")
+    # print(survey_nodes)
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]
 
     contributor_info = pd.DataFrame()
@@ -147,7 +147,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
             # if survey is not rsi
             print("Found survey", node["survey"], "which does not match rsi")
             continue
-        formtypes = pd.DataFrame(node['idbrformtypesBySurvey']['nodes'])
+        formtypes = pd.DataFrame(node["idbrformtypesBySurvey"]["nodes"])
         for contributor in node["contributorsBySurvey"]["nodes"]:
             if contributor["status"] not in ["Clear"]:
                 print("Found uncleared data")
@@ -169,8 +169,10 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
                     [
                         contributor_info,
                         pd.DataFrame(contributor)
-                            .drop(["responsesByReferenceAndPeriodAndSurvey", "period"], axis=1)
-                            .reset_index(),
+                        .drop(
+                            ["responsesByReferenceAndPeriodAndSurvey", "period"], axis=1
+                        )
+                        .reset_index(),
                     ]
                 )
                 all_responses[contributor_ref] = {}
@@ -192,26 +194,24 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
         for period, response_values in responses.items():
             output_row = {"reference": ref, "period": period}
             for response in filter(
-                    lambda r: r["questioncode"] in questions, response_values
+                lambda r: r["questioncode"] in questions, response_values
             ):
                 question_name = "Q{}".format(response["questioncode"])
                 try:
                     response_val = float(response["response"])
 
-                except:
+                except Exception:
                     response_val = None
 
                 output_row[question_name] = response_val
 
                 try:
-                    adj_val = float(response['adjustedresponse'])
+                    adj_val = float(response["adjustedresponse"])
 
-                except:
+                except Exception:
                     adj_val = None
 
                 output_row["adj_{}_returned".format(question_name)] = adj_val
-
-
 
             output_rows.append(output_row)
 
@@ -233,61 +233,119 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
     ]
     output = pd.merge(output_rows_df, contributor_info, how="left", on="reference")
 
-    output = pd.merge(output, formtypes[['formid','formtype']], on='formid')
-    output = output.rename(columns = {'formtype':'instrument_id'})
+    output = pd.merge(output, formtypes[["formid", "formtype"]], on="formid")
+    output = output.rename(columns={"formtype": "instrument_id"})
 
-    output = output[["reference",
-                     "period",
-                     "Q20",
-                     "adj_Q20_returned",
-                     "Q21",
-                     "adj_Q21_returned",
-                     "referencename",
-                     "enterprisereference",
-                     "rusic",
-                     "frozensic",
-                     "frozenturnover",
-                     "region",
-                     "cellnumber",
-                     "employment",
-                     "instrument_id"]]
-    save_dataframe_to_csv(output, config['IngestedLocation'], 'RSI/ingested/output')
+    output = output[
+        [
+            "reference",
+            "period",
+            "Q20",
+            "adj_Q20_returned",
+            "Q21",
+            "adj_Q21_returned",
+            "referencename",
+            "enterprisereference",
+            "rusic",
+            "frozensic",
+            "frozenturnover",
+            "region",
+            "cellnumber",
+            "employment",
+            "instrument_id",
+        ]
+    ]
+    save_dataframe_to_csv(output, config["IngestedLocation"], "RSI/ingested/output")
+
 
 def enrich(config):
-    execution_context = {'Database': "spp_res_ath_business_surveys"}
+    execution_context = {"Database": "spp_res_ath_business_surveys"}
     athena_query = """
     INSERT INTO spp_res_tab_rsi_ingestedstaged
 
-with organised_weights as (SELECT period, classification, cell_no, question_no, g_weight, a_weight FROM "spp_res_ath_business_surveys"."spp_res_tab_rsi_aglookup" where question_no = '20' )
+    with organised_weights as
+        (SELECT period,
+                classification,
+                cell_no,
+                question_no,
+                g_weight,
+                a_weight
+        FROM "spp_res_ath_business_surveys"."spp_res_tab_rsi_aglookup"
+        WHERE question_no = '20' )
 
-select a.reference as ruref, cast(a.period as integer) as period, c.domain, cast(a.cellnumber  as integer) as cell, case when substr(a.cellnumber, -1) = '4' or substr(a.cellnumber, -1) = '5' then '6' else a.cellnumber end as impclass, cast(a.frozenturnover as double) as frozen_turnover, cast(a.rusic as integer) as rusic2007, 'Y' as selected,cast(c.threshold as integer) as score_threshold, a.instrument_id, 666 as ref_period_start_date, 666 as ref_period_end_date, 666 as reported_start_date, 666 as reported_end_date, a.adj_q20_returned, a.adj_q21_returned, 0.0 as adj_q22_returned, 0.0 as adj_q23_returned,0.0 as adj_q24_returned,0.0 as adj_q25_returned,0.0 as adj_q26_returned,0.0 as adj_q27_returned, 666 as start_date, 666 as end_date, cast(b.a_weight as double) as design_weight, cast(b.g_weight as double) as calibration_weight from spp_res_tab_rsi_ingested a, organised_weights b, spp_res_tab_rsi_domaingroupings c where a.period=b.period and b.classification = a.rusic and b.cell_no = a.cellnumber and a.cellnumber=c.cell
+    SELECT a.reference as ruref,
+           CAST(a.period as integer) as period,
+           c.domain,
+           CAST(a.cellnumber  as integer) as cell,
+           CASE WHEN
+                SUBSTR(a.cellnumber, -1) = '4' OR SUBSTR(a.cellnumber, -1) = '5'
+           THEN '6'
+           ELSE a.cellnumber END as impclass,
+           CAST(a.frozenturnover as double) as frozen_turnover,
+           CAST(a.rusic as integer) as rusic2007,
+           'Y' as selected,
+           CAST(c.threshold as integer) as score_threshold,
+           a.instrument_id,
+           666 as ref_period_start_date,
+           666 as ref_period_end_date,
+           666 as reported_start_date,
+           666 as reported_end_date,
+           a.adj_q20_returned,
+           a.adj_q21_returned,
+           0.0 as adj_q22_returned,
+           0.0 as adj_q23_returned,
+           0.0 as adj_q24_returned,
+           0.0 as adj_q25_returned,
+           0.0 as adj_q26_returned,
+           0.0 as adj_q27_returned,
+           666 as start_date,
+           666 as end_date,
+           CAST(b.a_weight as double) as design_weight,
+           CAST(b.g_weight as double) as calibration_weight
+    FROM spp_res_tab_rsi_ingested a,
+         organised_weights b,
+         spp_res_tab_rsi_domaingroupings c
+    WHERE a.period=b.period
+    AND b.classification = a.rusic
+    AND b.cell_no = a.cellnumber
+    AND a.cellnumber=c.cell
     """
     client = boto3.client("athena")
     result = do_query(
         client,
         athena_query,
-        {'OutputLocation': config['OutputLocation']},
-        execution_context
+        {"OutputLocation": config["OutputLocation"]},
+        execution_context,
     )
     print(result)
 
+
 def split_s3_path(s3_path):
-    path_parts=s3_path.replace("s3://","").split("/")
-    bucket=path_parts.pop(0)
-    key="/".join(path_parts)
+    path_parts = s3_path.replace("s3://", "").split("/")
+    bucket = path_parts.pop(0)
+    key = "/".join(path_parts)
     return bucket, key
 
+
 def emptyfolders(config):
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket(config['IngestedLocation'])
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(config["IngestedLocation"])
     bucket.objects.filter(Prefix="RSI/ingestedstaged/").delete()
+
 
 config = json.loads(get_from_file())
 emptyfolders(config)
-snapshot_location = getResolvedOptions(sys.argv,['config'])
-config_parameters_string = (snapshot_location['config']).replace("'", '"').replace("True", "true").replace("False", "false")
+snapshot_location = getResolvedOptions(sys.argv, ["config"])
+config_parameters_string = (
+    (snapshot_location["config"])
+    .replace("'", '"')
+    .replace("True", "true")
+    .replace("False", "false")
+)
 snapshot_location_config = json.loads(config_parameters_string)
-snapshot_location_bucket, snapshot_location_key = split_s3_path(snapshot_location_config['snapshot_location'])
+snapshot_location_bucket, snapshot_location_key = split_s3_path(
+    snapshot_location_config["snapshot_location"]
+)
 
 
 ingest(config, snapshot_location_bucket, snapshot_location_key)

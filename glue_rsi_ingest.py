@@ -134,8 +134,8 @@ def do_query(client, query, config, execution_context=False):
 
 def ingest(config, snapshot_location_bucket, snapshot_location_key):
     snapshot_location_key = snapshot_location_key.replace(".json", "")
-    survey_nodes = read_from_s3(config["SnapshotLocation"], "snapshot")
-    # print(survey_nodes)
+    survey_nodes = read_from_s3(snapshot_location_bucket, snapshot_location_key)
+
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]
 
     contributor_info = pd.DataFrame()

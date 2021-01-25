@@ -8,8 +8,8 @@ if [ ! $2 ]; then
     echo "File not provided"
     exit 1
 fi
-s3location=$1
-file=$2
+s3location=$2
+file=$1
 
 echo "Adding $file to $s3location"
-#aws s3 cp /$file $s3location
+aws s3 cp ./$file $s3location

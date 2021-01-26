@@ -1,17 +1,8 @@
 # coding=utf-8
 
-"""
-Created on Tue Nov 19 14:30:00 2019
-@author: DPM
-
-Version History:
-    updated for spp-engine testing on 29/11/2019.
-    updated for config json change testing on 18/12/2019.
-    updated for spp-terraform on 11/01/2020
-"""
-
 from __future__ import unicode_literals
 
+import base64
 import json
 import sys
 
@@ -20,12 +11,11 @@ from spp.engine.pipeline import construct_pipeline
 from awsglue.utils import getResolvedOptions
 from es_aws_functions import general_functions
 
-current_module = "spp-res_glue_python_runner_job_script"
+current_module = "spp-res_glu_python_job_script"
 args = getResolvedOptions(sys.argv, ["config", "crawler"])
-config_parameters_string = (
-    (args["config"]).replace("'", '"').replace("True", "true").replace("False", "false")
-)
-config = json.loads(config_parameters_string)
+config_str = base64.b64decode(args["config"].encode("ascii")).decode("ascii")
+config = json.loads(config_str)
+crawler = args["crawler"]
 environment = config["pipeline"]["environment"]
 run_id = config["pipeline"]["run_id"]
 survey = config["survey"]
@@ -41,7 +31,7 @@ try:
     logger.info("Running pipeline {}, run {}".format(pipeline.name, config["run_id"]))
     pipeline.run(
         platform=config["platform"],
-        crawler_name=args["crawler"],
+        crawler_name=crawler,
         survey=survey,
         environment=environment,
         run_id=run_id,

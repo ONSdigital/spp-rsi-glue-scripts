@@ -1,3 +1,4 @@
+import base64
 import json
 import pandas as pd
 import boto3
@@ -336,13 +337,10 @@ def emptyfolders(config):
 config = json.loads(get_from_file())
 emptyfolders(config)
 snapshot_location = getResolvedOptions(sys.argv, ["config"])
-config_parameters_string = (
-    (snapshot_location["config"])
-    .replace("'", '"')
-    .replace("True", "true")
-    .replace("False", "false")
+config_str = base64.b64decode(snapshot_location["config"].encode("ascii")).decode(
+    "ascii"
 )
-snapshot_location_config = json.loads(config_parameters_string)
+snapshot_location_config = json.loads(config_str)
 snapshot_location_bucket, snapshot_location_key = split_s3_path(
     snapshot_location_config["snapshot_location"]
 )

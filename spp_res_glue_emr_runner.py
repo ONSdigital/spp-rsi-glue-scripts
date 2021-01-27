@@ -30,11 +30,7 @@ try:
     pipeline = construct_pipeline(config, survey)
     logger.info("Running pipeline {}, run {}".format(pipeline.name, config["run_id"]))
     pipeline.run(
-        platform=config["platform"],
-        crawler_name=crawler,
-        survey=survey,
-        environment=environment,
-        run_id=run_id,
+        crawler_name=crawler
     )
 except Exception as e:
     logger.error("Error constructing and/or running pipeline: ", e)

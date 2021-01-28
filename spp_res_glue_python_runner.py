@@ -20,7 +20,7 @@ run_id = config["pipeline"]["run_id"]
 survey = config["survey"]
 config = config["pipeline"]
 
-logger = general_functions.get_logger(survey, "spp-results-pipeline", environment, run_id)
+logger = general_functions.get_logger(survey, "spp-results-python-pipeline", environment, run_id)
 
 try:
     logger.info("Config variables loaded.")

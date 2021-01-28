@@ -15,19 +15,18 @@ args = getResolvedOptions(sys.argv, ["config", "crawler"])
 config_str = base64.b64decode(args["config"].encode("ascii")).decode("ascii")
 config = json.loads(config_str)
 crawler = args["crawler"]
+survey = config["survey"]
 environment = config["pipeline"]["environment"]
 run_id = config["pipeline"]["run_id"]
-survey = config["survey"]
-config = config["pipeline"]
 
 logger = general_functions.get_logger(survey, "spp-results-python-pipeline", environment, run_id)
 
 try:
     logger.info("Config variables loaded.")
-    pipeline = construct_pipeline(config, logger=logger)
+    pipeline = construct_pipeline(config["pipeline"], logger=logger)
     logger.info("Running pipeline {}, run {}".format(pipeline.name, config["run_id"]))
     pipeline.run(
         crawler_name=crawler
     )
-except Exception as e:
-    logger.error("Error constructing and/or running pipeline: ", e)
+except Exception:
+    logger.exception("Exception occurred in pipeline.")

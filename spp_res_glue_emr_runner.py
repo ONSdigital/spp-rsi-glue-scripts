@@ -29,4 +29,4 @@ try:
         crawler_name=crawler
     )
 except Exception:
-    logger.exception("Exception occurred in pipeline.")
+    logger.exception("Exception occurred in pipeline")

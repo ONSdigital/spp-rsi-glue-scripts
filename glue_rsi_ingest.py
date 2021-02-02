@@ -31,7 +31,7 @@ def read_from_s3(bucket_name, file_name, file_prefix="", file_extension=".json")
     :return: input_file: The JSON file in S3 - Type: String
     """
     s3 = boto3.resource("s3", region_name=region)
-    full_file_name = file_name + file_extension
+    full_file_name = file_name
     if len(file_prefix) > 0:
         full_file_name = file_prefix + full_file_name
     try:
@@ -134,7 +134,6 @@ def do_query(client, query, config, execution_context=False):
 
 
 def ingest(config, snapshot_location_bucket, snapshot_location_key):
-    snapshot_location_key = snapshot_location_key.replace(".json", "")
     survey_nodes = read_from_s3(snapshot_location_bucket, snapshot_location_key)
 
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]

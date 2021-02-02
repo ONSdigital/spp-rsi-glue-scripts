@@ -19,8 +19,8 @@ survey = config["survey"]
 environment = config["pipeline"]["environment"]
 run_id = config["pipeline"]["run_id"]
 
-logger = general_functions.get_logger(survey, 
-                                      "spp-results-emr-pipeline", 
+logger = general_functions.get_logger(survey,
+                                      "spp-results-emr-pipeline",
                                       environment, run_id)
 
 try:

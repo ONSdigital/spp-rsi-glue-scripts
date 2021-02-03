@@ -153,11 +153,12 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
             if contributor["status"] not in ["Clear"]:
                 # Assuming we want a blank row to signify a non-responder
                 period = contributor["period"]
-                if period not in contributor_responses:
-                    contributor_responses[period] = [{}]
+                contributor_responses[period] = [{}]
 
             else:
-                # Cleared data so load in the response
+                # Cleared data so load in the response. We get one response
+                # per question code hence the loop and checking whether
+                # we've already seen the period.
                 response_dict = contributor["responsesByReferenceAndPeriodAndSurvey"]
                 for response in response_dict["nodes"]:
                     period = response["period"]

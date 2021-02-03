@@ -149,19 +149,23 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
             continue
         formtypes = pd.DataFrame(node["idbrformtypesBySurvey"]["nodes"])
         for contributor in node["contributorsBySurvey"]["nodes"]:
-            if contributor["status"] not in ["Clear"]:
-                print("Found uncleared data")
-                continue
-
             contributor_responses = {}
-            response_dict = contributor["responsesByReferenceAndPeriodAndSurvey"]
-            for response in response_dict["nodes"]:
-                period = response["period"]
+            if contributor["status"] not in ["Clear"]:
+                # Assuming we want a blank row to signify a non-responder
+                period = contributor["period"]
                 if period not in contributor_responses:
-                    contributor_responses[period] = [response]
+                    contributor_responses[period] = [{}]
 
-                else:
-                    contributor_responses[period].append(response)
+            else:
+                # Cleared data so load in the response
+                response_dict = contributor["responsesByReferenceAndPeriodAndSurvey"]
+                for response in response_dict["nodes"]:
+                    period = response["period"]
+                    if period not in contributor_responses:
+                        contributor_responses[period] = [response]
+
+                    else:
+                        contributor_responses[period].append(response)
 
             contributor_ref = contributor["reference"]
             if contributor_ref not in all_responses:
@@ -185,7 +189,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
                 else:
                     existing_responses[period] += responses
 
-    print("responses:", sum(len(val) for val in all_responses.values()))
+    print("Ingested rows:", sum(len(val) for val in all_responses.values()))
 
     questions = set(["20", "21"])
     output_rows = []
@@ -193,8 +197,10 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
     for ref, responses in all_responses.items():
         for period, response_values in responses.items():
             output_row = {"reference": ref, "period": period}
+            # The non-responders will not be iterated over but pandas will fill
+            # in the columns as empty
             for response in filter(
-                lambda r: r["questioncode"] in questions, response_values
+                lambda r: r.get("questioncode") in questions, response_values
             ):
                 question_name = "Q{}".format(response["questioncode"])
                 try:

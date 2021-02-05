@@ -213,12 +213,12 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
                 output_row[question_name] = response_val
 
                 try:
-                    adj_val = float(response["adjustedresponse"])
+                    adj_val = float(response["averageweeklyadjustedresponse"])
 
                 except Exception:
                     adj_val = None
 
-                output_row["adj_{}_returned".format(question_name)] = adj_val
+                output_row["average_weekly_q".format(question_name)] = adj_val
 
             output_rows.append(output_row)
 
@@ -248,9 +248,9 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
             "reference",
             "period",
             "Q20",
-            "adj_Q20_returned",
+            "average_weekly_q20",
             "Q21",
-            "adj_Q21_returned",
+            "average_weekly_q21",
             "referencename",
             "enterprisereference",
             "rusic",
@@ -297,14 +297,14 @@ def enrich(config):
            666 as ref_period_end_date,
            666 as reported_start_date,
            666 as reported_end_date,
-           a.adj_q20_returned,
-           a.adj_q21_returned,
-           0.0 as adj_q22_returned,
-           0.0 as adj_q23_returned,
-           0.0 as adj_q24_returned,
-           0.0 as adj_q25_returned,
-           0.0 as adj_q26_returned,
-           0.0 as adj_q27_returned,
+           a.average_weekly_q20,
+           a.average_weekly_q21,
+           0.0 as average_weekly_q22,
+           0.0 as average_weekly_q23,
+           0.0 as average_weekly_q24,
+           0.0 as average_weekly_q25,
+           0.0 as average_weekly_q26,
+           0.0 as average_weekly_q27,
            666 as start_date,
            666 as end_date,
            CAST(b.a_weight as double) as design_weight,

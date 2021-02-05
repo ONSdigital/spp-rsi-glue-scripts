@@ -192,7 +192,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
 
     print("Ingested rows:", sum(len(val) for val in all_responses.values()))
 
-    questions = set(["20", "21"])
+    questions = {"20", "21", "22", "23", "24", "25", "26", "27"}
     output_rows = []
 
     for ref, responses in all_responses.items():
@@ -251,6 +251,18 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
             "average_weekly_q20",
             "Q21",
             "average_weekly_q21",
+            "Q22",
+            "average_weekly_q22",
+            "Q23",
+            "average_weekly_q23",
+            "Q24",
+            "average_weekly_q24",
+            "Q25",
+            "average_weekly_q25",
+            "Q26",
+            "average_weekly_q26",
+            "Q27",
+            "average_weekly_q27",
             "referencename",
             "enterprisereference",
             "rusic",
@@ -299,12 +311,12 @@ def enrich(config):
            666 as reported_end_date,
            a.average_weekly_q20,
            a.average_weekly_q21,
-           0.0 as average_weekly_q22,
-           0.0 as average_weekly_q23,
-           0.0 as average_weekly_q24,
-           0.0 as average_weekly_q25,
-           0.0 as average_weekly_q26,
-           0.0 as average_weekly_q27,
+           a.average_weekly_q22,
+           a.average_weekly_q23,
+           a.average_weekly_q24,
+           a.average_weekly_q25,
+           a.average_weekly_q26,
+           a.average_weekly_q27,
            666 as start_date,
            666 as end_date,
            CAST(b.a_weight as double) as design_weight,

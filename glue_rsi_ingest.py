@@ -218,7 +218,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
                 except Exception:
                     adj_val = None
 
-                output_row["average_weekly_q".format(response["questioncode"])] = adj_val
+                output_row[f"average_weekly_q{response['questioncode']}"] = adj_val
 
             output_rows.append(output_row)
 

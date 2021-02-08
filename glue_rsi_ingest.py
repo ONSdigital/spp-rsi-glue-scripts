@@ -135,11 +135,8 @@ def do_query(client, query, config, execution_context=False):
 
 def ingest(config, snapshot_location_bucket, snapshot_location_key):
     survey_nodes = read_from_s3(snapshot_location_bucket, snapshot_location_key)
-
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]
-
     contributor_info = pd.DataFrame()
-
     all_responses = {}
 
     for node in survey_nodes:
@@ -147,6 +144,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
             # if survey is not rsi
             print("Found survey", node["survey"], "which does not match rsi")
             continue
+
         formtypes = pd.DataFrame(node["idbrformtypesBySurvey"]["nodes"])
         for contributor in node["contributorsBySurvey"]["nodes"]:
             contributor_responses = {}
@@ -219,6 +217,16 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
                     adj_val = None
 
                 output_row[f"average_weekly_q{response['questioncode']}"] = adj_val
+
+            # Fill in the missing questions as otherwise pandas explodes
+            for question in questions:
+                question_name = f"Q{question}"
+                if question_name not in output_row:
+                    output_row[question_name] = None
+
+                average_name = f"average_weekly_q{question}"
+                if average_name not in output_row:
+                    output_row[average_name] = None
 
             output_rows.append(output_row)
 

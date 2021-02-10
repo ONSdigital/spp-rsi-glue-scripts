@@ -5,7 +5,7 @@ if [ ! $1 ]; then
     exit 1
 fi
 s3location=$1
-for VARIABLE in glue_rsi_ingest.py spp_res_glue_emr_runner.py spp_res_glue_python_runner.py
+for VARIABLE in glue_rsi_ingest.py spp_res_glue_emr_runner.py
 do
 ./deploy-glue-scripts.sh $VARIABLE $s3location
 done

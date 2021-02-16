@@ -368,7 +368,7 @@ snapshot_location_config = json.loads(config_str)
 snapshot_location_bucket, snapshot_location_key = split_s3_path(
     snapshot_location_config["snapshot_location"]
 )
-run_id = snapshot_location_config['run_id'])
+run_id = snapshot_location_config['pipeline']['run_id']
 
 ingest(config, snapshot_location_bucket, snapshot_location_key, run_id)
 enrich(config)

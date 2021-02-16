@@ -133,7 +133,7 @@ def do_query(client, query, config, execution_context=False):
     return False
 
 
-def ingest(config, snapshot_location_bucket, snapshot_location_key):
+def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
     survey_nodes = read_from_s3(snapshot_location_bucket, snapshot_location_key)
 
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]
@@ -197,7 +197,11 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
 
     for ref, responses in all_responses.items():
         for period, response_values in responses.items():
-            output_row = {"reference": ref, "period": period}
+            output_row = {
+                "run_id": run_id,
+                "reference": ref,
+                "period": period
+            }
             # The non-responders will not be iterated over but pandas will fill
             # in the columns as empty
             for response in filter(
@@ -245,6 +249,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key):
 
     output = output[
         [
+            "run_id",
             "reference",
             "period",
             "Q20",
@@ -292,7 +297,8 @@ def enrich(config):
         FROM "spp_res_ath_business_surveys"."spp_res_tab_rsi_aglookup"
         WHERE question_no = '20' )
 
-    SELECT a.reference as ruref,
+    SELECT a.run_id as run_id,
+           a.reference as ruref,
            CAST(a.period as integer) as period,
            c.domain,
            CAST(a.cellnumber  as integer) as cell,
@@ -362,7 +368,7 @@ snapshot_location_config = json.loads(config_str)
 snapshot_location_bucket, snapshot_location_key = split_s3_path(
     snapshot_location_config["snapshot_location"]
 )
+run_id = snapshot_location_config['run_id'])
 
-
-ingest(config, snapshot_location_bucket, snapshot_location_key)
+ingest(config, snapshot_location_bucket, snapshot_location_key, run_id)
 enrich(config)

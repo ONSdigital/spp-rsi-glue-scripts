@@ -2,13 +2,10 @@ import base64
 import json
 import pandas as pd
 import boto3
-from io import StringIO
 from awsglue.utils import getResolvedOptions
 import time
 import os
 import sys
-
-extension_types = {".json": "application/json", ".csv": "text/csv"}
 
 region = "eu-west-2"
 
@@ -20,67 +17,32 @@ def get_from_file():
         return f.read()
 
 
-def read_from_s3(bucket_name, file_name, file_prefix="", file_extension=".json"):
+def read_from_s3(bucket_name, file_name):
     """
     Given the name of the bucket and the filename(key), this function will
     return a file. File is JSON format.
     :param bucket_name: Name of the S3 bucket - Type: String
     :param file_name: Name of the file - Type: String
-    :param file_prefix: Optional, run id to be added as file name prefix - Type: String
-    :param file_extension: The file extension that the submitted file should have.
     :return: input_file: The JSON file in S3 - Type: String
     """
     s3 = boto3.resource("s3", region_name=region)
-    full_file_name = file_name
-    if len(file_prefix) > 0:
-        full_file_name = file_prefix + full_file_name
-    try:
-        s3_object = s3.Object(bucket_name, full_file_name)
-        input_file = s3_object.get()["Body"].read().decode("UTF-8")
-    except Exception as e:
-        raise Exception(f"Could not find s3://{bucket_name}/{full_file_name}.{type(e)}")
-    return input_file
+    s3_object = s3.Object(bucket_name, file_name)
+    return s3_object.get()["Body"].read().decode("UTF-8")
 
 
-def save_dataframe_to_csv(
-    dataframe, bucket_name, file_name, file_prefix="", file_extension=".csv"
-):
+def save_dataframe_to_json(data_frame, bucket_name, file_name):
     """
     This function takes a Dataframe and stores it in a specific bucket.
     :param dataframe: The Dataframe you wish to save - Type: Dataframe.
     :param bucket_name: Name of the bucket you wish to save the csv into - Type: String.
-    :param file_name: The name given to the CSV - Type: String.
-    :param file_prefix: Optional, run id to be added as file name prefix - Type: String
-    :param file_extension: The file extension that the submitted file should have.
+    :param file_name: The name given to the CSV - Type: String
     :return: None
     """
-    csv_buffer = StringIO()
-    dataframe.to_csv(csv_buffer, sep=",", index=False)
-    data = csv_buffer.getvalue()
-
-    save_to_s3(bucket_name, file_name, data, file_prefix, file_extension)
-
-
-def save_to_s3(
-    bucket_name, output_file_name, output_data, file_prefix="", file_extension=".json"
-):
-    """
-    This function uploads a specified set of data to the s3 bucket under the given name.
-    :param bucket_name: Name of the bucket you wish to upload too - Type: String.
-    :param output_file_name: Name you want the file to be called on s3 - Type: String.
-    :param output_data: The data that you wish to upload to s3 - Type: JSON.
-    :param file_prefix: Optional, run id to be added as file name prefix - Type: String
-    :param file_extension: The file extension that the submitted file should have.
-    :return: None
-    """
+    data = data_frame.to_json()
     s3 = boto3.resource("s3", region_name=region)
 
-    full_file_name = output_file_name + file_extension
-    if len(file_prefix) > 0:
-        full_file_name = file_prefix + full_file_name
-
-    s3.Object(bucket_name, full_file_name).put(
-        Body=output_data, ContentType=extension_types[file_extension]
+    s3.Object(bucket_name, file_name).put(
+        Body=data, ContentType='application/json'
     )
 
 
@@ -134,7 +96,10 @@ def do_query(client, query, config, execution_context=False):
 
 
 def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
-    survey_nodes = read_from_s3(snapshot_location_bucket, snapshot_location_key)
+    survey_nodes = read_from_s3(
+        snapshot_location_bucket,
+        f"{snapshot_location_key}.json"
+    )
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]
     contributor_info = pd.DataFrame()
     all_responses = {}
@@ -287,7 +252,11 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
             "instrument_id",
         ]
     ]
-    save_dataframe_to_csv(output, config["IngestedLocation"], "RSI/ingested/output")
+    save_dataframe_to_json(
+        output,
+        config["IngestedLocation"],
+        f"RSI/ingested/{run_id}.json"
+    )
 
 
 def enrich(config):

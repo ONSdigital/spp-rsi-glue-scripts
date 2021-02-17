@@ -38,7 +38,7 @@ def save_dataframe_to_json(data_frame, bucket_name, file_name):
     :param file_name: The name given to the CSV - Type: String
     :return: None
     """
-    data = data_frame.to_json()
+    data = data_frame.to_json(orient='records', lines=True)
     s3 = boto3.resource("s3", region_name=region)
 
     s3.Object(bucket_name, file_name).put(

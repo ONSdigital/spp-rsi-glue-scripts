@@ -38,12 +38,10 @@ def save_dataframe_to_json(data_frame, bucket_name, file_name):
     :param file_name: The name given to the CSV - Type: String
     :return: None
     """
-    data = data_frame.to_json(orient='records', lines=True)
+    data = data_frame.to_json(orient="records", lines=True)
     s3 = boto3.resource("s3", region_name=region)
 
-    s3.Object(bucket_name, file_name).put(
-        Body=data, ContentType='application/json'
-    )
+    s3.Object(bucket_name, file_name).put(Body=data, ContentType="application/json")
 
 
 def do_query(client, query, config, execution_context=False):
@@ -96,10 +94,7 @@ def do_query(client, query, config, execution_context=False):
 
 
 def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
-    survey_nodes = read_from_s3(
-        snapshot_location_bucket,
-        snapshot_location_key
-    )
+    survey_nodes = read_from_s3(snapshot_location_bucket, snapshot_location_key)
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]
     contributor_info = pd.DataFrame()
     all_responses = {}
@@ -160,11 +155,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
 
     for ref, responses in all_responses.items():
         for period, response_values in responses.items():
-            output_row = {
-                "run_id": run_id,
-                "reference": ref,
-                "period": period
-            }
+            output_row = {"run_id": run_id, "reference": ref, "period": period}
             # The non-responders will not be iterated over but pandas will fill
             # in the columns as empty
             for response in filter(
@@ -220,6 +211,38 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
     output = pd.merge(output, formtypes[["formid", "formtype"]], on="formid")
     output = output.rename(columns={"formtype": "instrument_id"})
 
+    # Apparently we get snapshots with broken data types so sort the schema
+    schema = {
+        "run_id": "object",
+        "reference": "object",
+        "period": "object",
+        "q20": "float64",
+        "average_weekly_q20": "float64",
+        "q21": "float64",
+        "average_weekly_q21": "float64",
+        "q22": "float64",
+        "average_weekly_q22": "float64",
+        "q23": "float64",
+        "average_weekly_q23": "float64",
+        "q24": "float64",
+        "average_weekly_q24": "float64",
+        "q25": "float64",
+        "average_weekly_q25": "float64",
+        "q26": "float64",
+        "average_weekly_q26": "float64",
+        "q27": "float64",
+        "average_weekly_q27": "float64",
+        "referencename": "object",
+        "enterprisereference": "object",
+        "rusic": "object",
+        "frozensic": "object",
+        "frozenturnover": "float64",
+        "region": "object",
+        "cellnumber": "object",
+        "employment": "int64",
+        "instrument_id": "object",
+    }
+
     output = output[
         [
             "run_id",
@@ -252,10 +275,10 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
             "instrument_id",
         ]
     ]
+    output = output.astype(dtype=schema)
+
     save_dataframe_to_json(
-        output,
-        config["IngestedLocation"],
-        f"RSI/ingested/{run_id}.json"
+        output, config["IngestedLocation"], f"RSI/ingested/{run_id}.json"
     )
 
 
@@ -340,7 +363,7 @@ snapshot_location_config = json.loads(config_str)
 snapshot_location_bucket, snapshot_location_key = split_s3_path(
     snapshot_location_config["snapshot_location"]
 )
-run_id = snapshot_location_config['pipeline']['run_id']
+run_id = snapshot_location_config["pipeline"]["run_id"]
 
 ingest(config, snapshot_location_bucket, snapshot_location_key, run_id)
 enrich(config)

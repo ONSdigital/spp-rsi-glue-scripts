@@ -180,7 +180,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
 
             # Fill in the missing questions as otherwise pandas explodes
             for question in questions:
-                question_name = f"Q{question}"
+                question_name = f"q{question}"
                 if question_name not in output_row:
                     output_row[question_name] = None
 

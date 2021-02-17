@@ -27,8 +27,12 @@ try:
     logger.info("Config variables loaded.")
     pipeline = construct_pipeline(config["pipeline"], logger=logger)
     logger.info("Running pipeline {}, run {}".format(pipeline.name, config["run_id"]))
-    pipeline.run(
+    if not pipeline.run(
         crawler_name=crawler
-    )
+    ):
+        logger.error("Failed running pipeline")
+        sys.exit(1)
+
 except Exception:
     logger.exception("Exception occurred in pipeline")
+    sys.exit(1)

@@ -84,7 +84,7 @@ def do_query(client, query, config, execution_context=False):
         ):
             state = response["QueryExecution"]["Status"]["State"]
 
-            # If anything but succeeeded/failed, go back around the loop
+            # If anything but succeeded/failed, go back around the loop
             if state == "FAILED":
                 return False
             elif state == "SUCCEEDED":
@@ -98,7 +98,7 @@ def do_query(client, query, config, execution_context=False):
 def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
     survey_nodes = read_from_s3(
         snapshot_location_bucket,
-        f"{snapshot_location_key}.json"
+        snapshot_location_key
     )
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]
     contributor_info = pd.DataFrame()
@@ -319,7 +319,9 @@ def enrich(config):
         {"OutputLocation": config["OutputLocation"]},
         execution_context,
     )
-    print(result)
+    print("Query result:", result)
+    if not result:
+        raise RuntimeError("Failed to perform enrichment query")
 
 
 def split_s3_path(s3_path):
@@ -329,14 +331,7 @@ def split_s3_path(s3_path):
     return bucket, key
 
 
-def emptyfolders(config):
-    s3 = boto3.resource("s3")
-    bucket = s3.Bucket(config["IngestedLocation"])
-    bucket.objects.filter(Prefix="RSI/ingestedstaged/").delete()
-
-
 config = json.loads(get_from_file())
-emptyfolders(config)
 snapshot_location = getResolvedOptions(sys.argv, ["config"])
 config_str = base64.b64decode(snapshot_location["config"].encode("ascii")).decode(
     "ascii"

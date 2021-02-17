@@ -245,7 +245,6 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
 
     output = output[
         [
-            "run_id",
             "reference",
             "period",
             "q20",
@@ -273,6 +272,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
             "cellnumber",
             "employment",
             "instrument_id",
+            "run_id",
         ]
     ]
     output = output.astype(dtype=schema)
@@ -297,8 +297,7 @@ def enrich(config):
         FROM "spp_res_ath_business_surveys"."spp_res_tab_rsi_aglookup"
         WHERE question_no = '20' )
 
-    SELECT a.run_id as run_id,
-           a.reference as ruref,
+    SELECT a.reference as ruref,
            CAST(a.period as integer) as period,
            c.domain,
            CAST(a.cellnumber  as integer) as cell,
@@ -326,7 +325,8 @@ def enrich(config):
            666 as start_date,
            666 as end_date,
            CAST(b.a_weight as double) as design_weight,
-           CAST(b.g_weight as double) as calibration_weight
+           CAST(b.g_weight as double) as calibration_weight,
+           a.run_id as run_id
     FROM spp_res_tab_rsi_ingested a,
          organised_weights b,
          spp_res_tab_rsi_domaingroupings c

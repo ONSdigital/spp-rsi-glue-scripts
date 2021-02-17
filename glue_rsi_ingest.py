@@ -161,7 +161,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
             for response in filter(
                 lambda r: r.get("questioncode") in questions, response_values
             ):
-                question_name = "Q{}".format(response["questioncode"])
+                question_name = "q{}".format(response["questioncode"])
                 try:
                     response_val = float(response["response"])
 
@@ -248,21 +248,21 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
             "run_id",
             "reference",
             "period",
-            "Q20",
+            "q20",
             "average_weekly_q20",
-            "Q21",
+            "q21",
             "average_weekly_q21",
-            "Q22",
+            "q22",
             "average_weekly_q22",
-            "Q23",
+            "q23",
             "average_weekly_q23",
-            "Q24",
+            "q24",
             "average_weekly_q24",
-            "Q25",
+            "q25",
             "average_weekly_q25",
-            "Q26",
+            "q26",
             "average_weekly_q26",
-            "Q27",
+            "q27",
             "average_weekly_q27",
             "referencename",
             "enterprisereference",

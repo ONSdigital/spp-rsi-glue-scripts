@@ -181,7 +181,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
 
             # Fill in the missing questions as otherwise pandas explodes
             for question in questions:
-                question_name = f"Q{question}"
+                question_name = f"q{question}"
                 if question_name not in output_row:
                     output_row[question_name] = None
 
@@ -246,7 +246,6 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
 
     output = output[
         [
-            "run_id",
             "reference",
             "period",
             "q20",
@@ -274,6 +273,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
             "cellnumber",
             "employment",
             "instrument_id",
+            "run_id",
         ]
     ]
     output = output.astype(dtype=schema)
@@ -298,8 +298,7 @@ def enrich(config, run_id):
         FROM "spp_res_ath_business_surveys"."spp_res_tab_rsi_aglookup"
         WHERE question_no = '20' )
 
-    SELECT
-           a.reference as ruref,
+    SELECT a.reference as ruref,
            CAST(a.period as integer) as period,
            c.domain,
            CAST(a.cellnumber  as integer) as cell,

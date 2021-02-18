@@ -1,6 +1,7 @@
 import base64
 import json
 import pandas as pd
+import re
 import boto3
 from awsglue.utils import getResolvedOptions
 import time
@@ -282,7 +283,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
     )
 
 
-def enrich(config):
+def enrich(config, run_id):
     execution_context = {"Database": "spp_res_ath_business_surveys"}
     athena_query = """
     INSERT INTO spp_res_tab_rsi_ingestedstaged
@@ -334,6 +335,7 @@ def enrich(config):
     AND b.classification = a.rusic
     AND b.cell_no = a.cellnumber
     AND a.cellnumber=c.cell
+    AND a.run_id = "{run_id}"
     """
     client = boto3.client("athena")
     result = do_query(
@@ -364,6 +366,9 @@ snapshot_location_bucket, snapshot_location_key = split_s3_path(
     snapshot_location_config["snapshot_location"]
 )
 run_id = snapshot_location_config["pipeline"]["run_id"]
+# Check run ids only have digits and dots to protect our athena query
+if re.match(r"[^0-9.]", run_id):
+    raise RuntimeError(f"Invalid run_id {repr(run_id)}")
 
 ingest(config, snapshot_location_bucket, snapshot_location_key, run_id)
-enrich(config)
+enrich(config, run_id)

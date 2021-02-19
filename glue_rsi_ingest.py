@@ -285,7 +285,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
 
 def enrich(config, run_id):
     execution_context = {"Database": "spp_res_ath_business_surveys"}
-    athena_query = """
+    athena_query = f"""
     INSERT INTO spp_res_tab_rsi_ingestedstaged
 
     with organised_weights as

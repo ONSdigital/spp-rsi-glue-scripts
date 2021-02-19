@@ -335,7 +335,7 @@ def enrich(config, run_id):
     AND b.classification = a.rusic
     AND b.cell_no = a.cellnumber
     AND a.cellnumber=c.cell
-    AND a.run_id = "{run_id}"
+    AND a.run_id = '{run_id}'
     """
     client = boto3.client("athena")
     result = do_query(

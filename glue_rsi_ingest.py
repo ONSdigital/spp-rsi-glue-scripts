@@ -8,6 +8,8 @@ import time
 import os
 import sys
 
+from es_aws_functions import general_functions
+
 region = "eu-west-2"
 
 
@@ -95,15 +97,17 @@ def do_query(client, query, config, execution_context=False):
 
 
 def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
+    logger.info("Starting ingest process.")
     survey_nodes = read_from_s3(snapshot_location_bucket, snapshot_location_key)
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]
+    logger.info("Snapshot successfully loaded from s3.")
     contributor_info = pd.DataFrame()
     all_responses = {}
 
     for node in survey_nodes:
         if node["survey"] != "023":
             # if survey is not rsi
-            print("Found survey", node["survey"], "which does not match rsi")
+            logger.info(f"Found survey {node['survey']} which does not match rsi.")
             continue
 
         formtypes = pd.DataFrame(node["idbrformtypesBySurvey"]["nodes"])
@@ -149,7 +153,7 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
                 else:
                     existing_responses[period] += responses
 
-    print("Ingested rows:", sum(len(val) for val in all_responses.values()))
+    logger.info(f"Ingested rows: {sum(len(val) for val in all_responses.values())}")
 
     questions = {"20", "21", "22", "23", "24", "25", "26", "27"}
     output_rows = []
@@ -281,9 +285,11 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
     save_dataframe_to_json(
         output, config["IngestedLocation"], f"RSI/ingested/{run_id}.json"
     )
+    logger.info("Ingested data successfully saved to s3.")
 
 
 def enrich(config, run_id):
+    logger.info("Starting enrichment.")
     execution_context = {"Database": "spp_res_ath_business_surveys"}
     athena_query = f"""
     INSERT INTO spp_res_tab_rsi_ingestedstaged
@@ -344,9 +350,10 @@ def enrich(config, run_id):
         {"OutputLocation": config["OutputLocation"]},
         execution_context,
     )
-    print("Query result:", result)
+    logger.info(f"Query result: {result}")
     if not result:
         raise RuntimeError("Failed to perform enrichment query")
+    logger.info("Enrichment successful.")
 
 
 def split_s3_path(s3_path):
@@ -366,9 +373,15 @@ snapshot_location_bucket, snapshot_location_key = split_s3_path(
     snapshot_location_config["snapshot_location"]
 )
 run_id = snapshot_location_config["pipeline"]["run_id"]
+survey = snapshot_location_config["survey"]
+environment = snapshot_location_config["pipeline"]["environment"]
 # Check run ids only have digits and dots to protect our athena query
 if re.match(r"[^0-9.]", run_id):
     raise RuntimeError(f"Invalid run_id {repr(run_id)}")
+
+logger = general_functions.get_logger(survey, "spp-results-ingest",
+                                      environment, run_id)
+logger.info("Retrieved configuration variables from config.")
 
 ingest(config, snapshot_location_bucket, snapshot_location_key, run_id)
 enrich(config, run_id)

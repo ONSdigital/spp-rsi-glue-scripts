@@ -97,17 +97,17 @@ def do_query(client, query, config, execution_context=False):
 
 
 def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
-    logger.info("Starting ingest process.")
+    logger.info("Starting ingest process")
     survey_nodes = read_from_s3(snapshot_location_bucket, snapshot_location_key)
     survey_nodes = json.loads(survey_nodes)["data"]["allSurveys"]["nodes"]
-    logger.info("Snapshot successfully loaded from s3.")
+    logger.info("Snapshot successfully loaded from s3")
     contributor_info = pd.DataFrame()
     all_responses = {}
 
     for node in survey_nodes:
         if node["survey"] != "023":
             # if survey is not rsi
-            logger.info(f"Found survey {node['survey']} which does not match rsi.")
+            logger.warning(f"Found survey {node['survey']} which does not match rsi.")
             continue
 
         formtypes = pd.DataFrame(node["idbrformtypesBySurvey"]["nodes"])
@@ -285,11 +285,11 @@ def ingest(config, snapshot_location_bucket, snapshot_location_key, run_id):
     save_dataframe_to_json(
         output, config["IngestedLocation"], f"RSI/ingested/{run_id}.json"
     )
-    logger.info("Ingested data successfully saved to s3.")
+    logger.info("Ingested data successfully saved to s3")
 
 
 def enrich(config, run_id):
-    logger.info("Starting enrichment.")
+    logger.info("Starting enrichment")
     execution_context = {"Database": "spp_res_ath_business_surveys"}
     athena_query = f"""
     INSERT INTO spp_res_tab_rsi_ingestedstaged
@@ -353,7 +353,7 @@ def enrich(config, run_id):
     logger.info(f"Query result: {result}")
     if not result:
         raise RuntimeError("Failed to perform enrichment query")
-    logger.info("Enrichment successful.")
+    logger.info("Enrichment successful")
 
 
 def split_s3_path(s3_path):
@@ -381,7 +381,7 @@ if re.match(r"[^0-9.]", run_id):
 
 logger = general_functions.get_logger(survey, "spp-results-ingest",
                                       environment, run_id)
-logger.info("Retrieved configuration variables from config.")
+logger.info("Retrieved configuration variables")
 
 ingest(config, snapshot_location_bucket, snapshot_location_key, run_id)
 enrich(config, run_id)

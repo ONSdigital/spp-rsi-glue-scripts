@@ -26,7 +26,7 @@ logger = general_functions.get_logger(survey,
 try:
     logger.info("Config variables loaded.")
     pipeline = construct_pipeline(config["pipeline"], logger=logger)
-    logger.info("Running pipeline {}, run {}".format(pipeline.name, config["pipeline"]["run_id"]))
+    logger.info("Running pipeline {}, run {}".format(pipeline.name, run_id))
     if not pipeline.run(
         crawler_name=crawler
     ):

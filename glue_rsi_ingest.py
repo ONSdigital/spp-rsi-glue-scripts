@@ -4,11 +4,10 @@ import pandas as pd
 import re
 import boto3
 from awsglue.utils import getResolvedOptions
+import logging
 import time
 import os
 import sys
-
-from es_aws_functions import general_functions
 
 region = "eu-west-2"
 
@@ -379,8 +378,8 @@ environment = snapshot_location_config["pipeline"]["environment"]
 if re.match(r"[^0-9.]", run_id):
     raise RuntimeError(f"Invalid run_id {repr(run_id)}")
 
-logger = general_functions.get_logger(survey, "spp-results-ingest",
-                                      environment, run_id)
+logger = logging.getLogger()
+
 logger.info("Retrieved configuration variables")
 
 ingest(config, snapshot_location_bucket, snapshot_location_key, run_id)

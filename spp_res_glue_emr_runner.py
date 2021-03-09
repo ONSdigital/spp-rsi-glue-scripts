@@ -19,7 +19,8 @@ environment = config["pipeline"]["environment"]
 run_id = config["pipeline"]["run_id"]
 # Enter run_id into parameters for ingest pipeline job
 config["pipeline"]["methods"][0]["params"][0]["run_id"] = run_id
-config["pipeline"]["methods"][0]["params"][0]["snapshot_location"] = config["snapshot_location"]
+config["pipeline"]["methods"][0]["params"][0]["snapshot_location"] =\
+    config["snapshot_location"]
 
 logger = general_functions.get_logger(survey,
                                       "spp-results-emr-pipeline",

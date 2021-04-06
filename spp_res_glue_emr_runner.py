@@ -13,11 +13,14 @@ config = json.loads(config_str)
 survey = config["survey"]
 environment = config["pipeline"]["environment"]
 run_id = config["pipeline"]["run_id"]
-# Enter run_id into parameters for ingest pipeline job
-config["pipeline"]["methods"][0]["params"]["run_id"] = run_id
-config["pipeline"]["methods"][0]["params"]["snapshot_location"] =\
+# Some parameters for ingest are only known at runtime, however the config
+# is the only mechanism we have to pass them to the pipeline
+ingest_params = config["pipeline"]["methods"][0].get("params", {})
+ingest_params["run_id"] = run_id
+ingest_params["snapshot_location"] =\
     config["snapshot_location"]
 
+config["pipeline"]["methods"][0]["params"] = ingest_params
 logger = general_functions.get_logger(survey,
                                       "spp-results-emr-pipeline",
                                       environment, run_id)

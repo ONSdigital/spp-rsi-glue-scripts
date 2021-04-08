@@ -46,7 +46,9 @@ try:
         "run_id": run_id,
         "snapshot_location": config["snapshot_location"]
     }
-    methods[0]["params"].update(extra_ingest_params)
+    ingest_params = methods[0].get("params", {})
+    ingest_params.update(extra_ingest_params)
+    methods[0]["params"] = ingest_params
 
     logger.debug("Starting spark Session for %s", name)
     spark = (

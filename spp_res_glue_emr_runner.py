@@ -12,9 +12,11 @@ config_str = base64.b64decode(args["config"].encode("ascii")).decode("ascii")
 config = json.loads(config_str)
 survey = config["survey"]
 environment = config["pipeline"]["environment"]
-run_id = config["run_id"]
+run_id = config["pipeline"]["run_id"]
 name = config["name"]
 bpm_queue_url = config.get("bpm_queue_url")
+methods = config["pipeline"]["methods"]
+num_methods = len(methods)
 logger = general_functions.get_logger(survey,
                                       "spp-results-emr-pipeline",
                                       environment, run_id)
@@ -31,7 +33,7 @@ def send_status(status, module_name, current_step_num=None):
         run_id,
         survey="RSI",
         current_step_num=current_step_num,
-        total_steps=len(config["methods"]),
+        total_steps=num_methods,
     )
 
 
@@ -39,11 +41,12 @@ logger.info("Running pipeline %s", name)
 
 try:
     # Set up extra params for ingest provided at runtime
-    config["pipeline"]["methods"][0]["params"]["run_id"] = run_id
-    config["pipeline"]["methods"][0]["params"]["snapshot_location"] =\
-        config["snapshot_location"]
+    extra_ingest_params = {
+        "run_id": run_id,
+        "snapshot_location": config["snapshot_location"]
+    }
+    methods[0]["params"].update(extra_ingest_params)
 
-    methods = config["methods"]
     logger.debug("Starting spark Session for %s", name)
     spark = (
         pyspark.sql.SparkSession.builder.enableHiveSupport()

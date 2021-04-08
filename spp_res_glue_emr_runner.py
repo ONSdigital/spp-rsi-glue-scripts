@@ -17,6 +17,7 @@ name = config["name"]
 bpm_queue_url = config.get("bpm_queue_url")
 methods = config["pipeline"]["methods"]
 num_methods = len(methods)
+
 logger = general_functions.get_logger(survey,
                                       "spp-results-emr-pipeline",
                                       environment, run_id)

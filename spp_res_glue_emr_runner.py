@@ -19,6 +19,7 @@ logger = general_functions.get_logger(survey,
                                       "spp-results-emr-pipeline",
                                       environment, run_id)
 
+
 def send_status(status, module_name, current_step_num=None):
     if bpm_queue_url is None:
         return
@@ -30,7 +31,7 @@ def send_status(status, module_name, current_step_num=None):
         run_id,
         survey="RSI",
         current_step_num=current_step_num,
-        total_steps=len(self.methods),
+        total_steps=len(config["methods"]),
     )
 
 

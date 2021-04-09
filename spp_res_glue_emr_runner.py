@@ -7,26 +7,10 @@ from awsglue.utils import getResolvedOptions
 from es_aws_functions import aws_functions
 from es_aws_functions import general_functions
 
-args = getResolvedOptions(sys.argv, ["config"])
-config_str = base64.b64decode(args["config"].encode("ascii")).decode("ascii")
-config = json.loads(config_str)
-survey = config["survey"]
-environment = config["pipeline"]["environment"]
-run_id = config["pipeline"]["run_id"]
-name = config["name"]
-bpm_queue_url = config.get("bpm_queue_url")
-methods = config["pipeline"]["methods"]
-num_methods = len(methods)
-
-logger = general_functions.get_logger(survey,
-                                      "spp-results-emr-pipeline",
-                                      environment, run_id)
+logger = None
 
 
 def send_status(status, module_name, current_step_num=None):
-    if bpm_queue_url is None:
-        return
-
     aws_functions.send_bpm_status(
         bpm_queue_url,
         module_name,
@@ -38,9 +22,25 @@ def send_status(status, module_name, current_step_num=None):
     )
 
 
-logger.info("Running pipeline %s", name)
-
 try:
+    args = getResolvedOptions(sys.argv, ["config"])
+    config_str = base64.b64decode(args["config"].encode("ascii")).decode("ascii")
+    config = json.loads(config_str)
+    survey = config["survey"]
+    environment = config["pipeline"]["environment"]
+    run_id = config["pipeline"]["run_id"]
+    name = config["pipeline"]["name"]
+    bpm_queue_url = config["pipeline"]["bpm_queue_url"]
+    methods = config["pipeline"]["methods"]
+    num_methods = len(methods)
+    logger = general_functions.get_logger(
+        survey,
+        "spp-results-emr-pipeline",
+        environment,
+        run_id
+    )
+
+    logger.info("Running pipeline %s", name)
     # Set up extra params for ingest provided at runtime
     extra_ingest_params = {
         "run_id": run_id,
@@ -98,6 +98,15 @@ try:
     send_status("DONE", name)
 
 except Exception:
+    if logger is None:
+        # Set up logger so we can log all exceptions properly
+        logger = general_functions.get_logger(
+            "uninitialised",
+            "spp-results-emr-pipeline",
+            "uninitialised",
+            None
+        )
+
     logger.exception("Exception occurred in pipeline")
     send_status("ERROR", name)
     sys.exit(1)

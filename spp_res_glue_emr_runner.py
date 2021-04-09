@@ -69,8 +69,9 @@ try:
             "IN PROGRESS", method["name"], current_step_num=step_num
         )
 
-        if method["provide_session"]:
-            method["params"]["spark"] = spark
+        method_params = method.get("params", {})
+        if method.get("provide_session"):
+            method_params["spark"] = spark
 
         data_source = method.get("data_source")
         if data_source is not None:
@@ -79,10 +80,10 @@ try:
             df = df.filter(df.run_id == run_id)
             if df.count() == 0:
                 raise RuntimeError(f"Found no rows for run id {run_id}")
-            method["params"]["df"] = df
+            method_params["df"] = df
 
         module = importlib.import_module(method["module"])
-        output = getattr(module, method["name"])(**method["params"])
+        output = getattr(module, method["name"])(**method_params)
 
         data_target = method.get("data_target")
         if data_target is not None:

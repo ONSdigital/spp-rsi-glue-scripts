@@ -36,7 +36,7 @@ try:
         "run_id",
         "snapshot_location"
     ])
-
+    bpm_queue_url = args["bpm_queue_url"]
     environment = args["environment"]
     run_id = args["run_id"]
     pipeline = args["pipeline"]
@@ -50,7 +50,6 @@ try:
         ).get()["Body"]
     )
 
-    bpm_queue_url = config["bpm_queue_url"]
     methods = config["methods"]
     num_methods = len(methods)
 

@@ -36,7 +36,7 @@ try:
         "run_id",
         "snapshot_location"
     ])
-    
+
     environment = args["environment"]
     run_id = args["run_id"]
     pipeline = args["pipeline"]

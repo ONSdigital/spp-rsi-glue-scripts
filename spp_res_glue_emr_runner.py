@@ -40,10 +40,7 @@ try:
     ])
     s3 = boto3.resource("s3", region_name="eu-west-2")
     config = json.load(
-        s3.Object(
-            args["config_bucket"],
-            args["config_key"]
-        ).get()["Body"].read()
+        s3.Object(args["config_bucket"], args["config_key"]).get()["Body"]
     )
 
     environment = args["environment"]

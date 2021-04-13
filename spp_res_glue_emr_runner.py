@@ -31,25 +31,28 @@ def send_status(status, module_name, current_step_num=None):
 
 try:
     args = getResolvedOptions(sys.argv, [
-        "config_bucket",
-        "config_key",
         "environment",
         "pipeline",
         "run_id",
         "snapshot_location"
     ])
-    s3 = boto3.resource("s3", region_name="eu-west-2")
-    config = json.load(
-        s3.Object(args["config_bucket"], args["config_key"]).get()["Body"]
-    )
-
+    
     environment = args["environment"]
     run_id = args["run_id"]
     pipeline = args["pipeline"]
+    snapshot_location = args["snapshot_location"]
+
+    s3 = boto3.resource("s3", region_name="eu-west-2")
+    config = json.load(
+        s3.Object(
+            f"spp-results-{environment}-config",
+            f"{pipeline}.json"
+        ).get()["Body"]
+    )
+
     bpm_queue_url = config["pipeline"]["bpm_queue_url"]
     methods = config["pipeline"]["methods"]
     num_methods = len(methods)
-    snapshot_location = args["snapshot_location"]
 
     logger = general_functions.get_logger(
         pipeline,

@@ -45,7 +45,7 @@ try:
     s3 = boto3.resource("s3", region_name="eu-west-2")
     config = json.load(
         s3.Object(
-            f"spp-results-{environment}-config",
+            f"spp-res-{environment}-config",
             f"{pipeline}.json"
         ).get()["Body"]
     )

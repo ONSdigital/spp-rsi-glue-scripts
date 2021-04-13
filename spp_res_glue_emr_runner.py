@@ -31,6 +31,7 @@ def send_status(status, module_name, current_step_num=None):
 
 try:
     args = getResolvedOptions(sys.argv, [
+        "bpm_queue_url",
         "environment",
         "pipeline",
         "run_id",

@@ -1,4 +1,4 @@
-import base64
+import boto3
 import importlib
 import json
 import pyspark.sql
@@ -7,7 +7,14 @@ from awsglue.utils import getResolvedOptions
 from es_aws_functions import aws_functions
 from es_aws_functions import general_functions
 
+
+bpm_queue_url = None
+component = "spp-results-emr-glue-runner"
+environment = "unconfigured"
 logger = None
+num_methods = 0
+pipeline = "unconfigured"
+run_id = None
 
 
 def send_status(status, module_name, current_step_num=None):
@@ -16,57 +23,77 @@ def send_status(status, module_name, current_step_num=None):
         module_name,
         status,
         run_id,
-        survey="RSI",
+        survey=pipeline,
         current_step_num=current_step_num,
         total_steps=num_methods,
     )
 
 
 try:
-    args = getResolvedOptions(sys.argv, ["config"])
-    config_str = base64.b64decode(args["config"].encode("ascii")).decode("ascii")
-    config = json.loads(config_str)
-    survey = config["survey"]
-    environment = config["pipeline"]["environment"]
-    run_id = config["pipeline"]["run_id"]
-    name = config["pipeline"]["name"]
+    args = getResolvedOptions(sys.argv, [
+        "config_bucket",
+        "config_key",
+        "environment",
+        "pipeline",
+        "region",
+        "run_id",
+        "snapshot_location"
+    ])
+    s3 = boto3.resource("s3", region_name=args["region"])
+    config = json.load(
+        s3.Object(
+            args["config_bucket"],
+            args["config_key"]
+        ).get()["Body"].read()
+    )
+
+    environment = args["environment"]
+    run_id = args["run_id"]
+    pipeline = args["pipeline"]
     bpm_queue_url = config["pipeline"]["bpm_queue_url"]
     methods = config["pipeline"]["methods"]
     num_methods = len(methods)
+    snapshot_location = args["snapshot_location"]
+
     logger = general_functions.get_logger(
-        survey,
-        "spp-results-emr-pipeline",
+        pipeline,
+        component,
         environment,
         run_id
     )
 
-    logger.info("Running pipeline %s", name)
+    logger.info(
+        "Running pipeline %s with snapshot %s",
+        pipeline,
+        snapshot_location
+    )
     # Set up extra params for ingest provided at runtime
     extra_ingest_params = {
         "run_id": run_id,
-        "snapshot_location": config["snapshot_location"]
+        "snapshot_location": snapshot_location
     }
     ingest_params = methods[0].get("params", {})
     ingest_params.update(extra_ingest_params)
     methods[0]["params"] = ingest_params
 
-    logger.debug("Starting spark Session for %s", name)
     spark = (
         pyspark.sql.SparkSession.builder.enableHiveSupport()
-        .appName(name)
+        .appName(pipeline)
         .getOrCreate()
     )
     spark.sql("SET spark.sql.sources.partitionOverwriteMode=dynamic")
     spark.sql("SET hive.exec.dynamic.partition.mode=nonstrict")
 
-    send_status("IN PROGRESS", name)
+    send_status("IN PROGRESS", pipeline)
 
     for method_num, method in enumerate(methods):
         # method_num is 0-indexed but we probably want step numbers
         # to be 1-indexed
         step_num = method_num + 1
         send_status(
-            "IN PROGRESS", method["name"], current_step_num=step_num
+            "IN PROGRESS",
+            method["name"],
+            current_step_num=step_num
         )
 
         if method["provide_session"]:
@@ -95,18 +122,17 @@ try:
         send_status("DONE", method["name"], current_step_num=step_num)
         logger.info("Method Finished: %s", method["name"])
 
-    send_status("DONE", name)
+    send_status("DONE", pipeline)
 
 except Exception:
     if logger is None:
-        # Set up logger so we can log all exceptions properly
         logger = general_functions.get_logger(
-            "uninitialised",
-            "spp-results-emr-pipeline",
-            "uninitialised",
+            pipeline,
+            component,
+            environment,
             None
         )
 
-    logger.exception("Exception occurred in pipeline")
-    send_status("ERROR", name)
+    logger.exception("Exception occurred in glue job")
+    send_status("ERROR", pipeline)
     sys.exit(1)

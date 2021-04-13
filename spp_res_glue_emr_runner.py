@@ -50,8 +50,8 @@ try:
         ).get()["Body"]
     )
 
-    bpm_queue_url = config["pipeline"]["bpm_queue_url"]
-    methods = config["pipeline"]["methods"]
+    bpm_queue_url = config["bpm_queue_url"]
+    methods = config["methods"]
     num_methods = len(methods)
 
     logger = general_functions.get_logger(

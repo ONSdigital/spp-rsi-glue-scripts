@@ -35,11 +35,10 @@ try:
         "config_key",
         "environment",
         "pipeline",
-        "region",
         "run_id",
         "snapshot_location"
     ])
-    s3 = boto3.resource("s3", region_name=args["region"])
+    s3 = boto3.resource("s3", region_name="eu-west-2")
     config = json.load(
         s3.Object(
             args["config_bucket"],

@@ -85,6 +85,7 @@ try:
 
     send_status("IN PROGRESS", pipeline)
 
+    df = None
     for method_num, method in enumerate(methods):
         # method_num is 0-indexed but we probably want step numbers
         # to be 1-indexed
@@ -99,25 +100,21 @@ try:
         if method.get("provide_session"):
             method_params["spark"] = spark
 
-        data_source = method.get("data_source")
-        if data_source is not None:
-            logger.debug("Retrieving data from %r", data_source)
-            df = spark.table(data_source)
-            df = df.filter(df.run_id == run_id)
+        if df is not None:
             if df.count() == 0:
-                raise RuntimeError(f"Found no rows for run id {run_id}")
+                raise RuntimeError(f"Found no rows in data frame")
             method_params["df"] = df
 
         module = importlib.import_module(method["module"])
-        output = getattr(module, method["name"])(**method_params)
+        df = getattr(module, method["name"])(**method_params).persist()
 
         data_target = method.get("data_target")
         if data_target is not None:
             # We need to select the relevant columns from the output
             # to support differing column orders and so that we get
             # only the columns we want in our output tables
-            output = output.select(spark.table(data_target).columns)
-            output.write.insertInto(data_target, overwrite=True)
+            (df.select(spark.table(data_target).columns)
+                .write.insertInto(data_target, overwrite=True))
 
         send_status("DONE", method["name"], current_step_num=step_num)
         logger.info("Method Finished: %s", method["name"])

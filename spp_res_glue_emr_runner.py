@@ -106,14 +106,15 @@ try:
             method_params["df"] = df
 
         module = importlib.import_module(method["module"])
-        df = getattr(module, method["name"])(**method_params).persist()
+        df = getattr(module, method["name"])(**method_params)
 
         data_target = method.get("data_target")
         if data_target is not None:
             # We need to select the relevant columns from the output
             # to support differing column orders and so that we get
             # only the columns we want in our output tables
-            (df.select(spark.table(data_target).columns)
+            df = (df.select(spark.table(data_target).columns)
+                .persist()
                 .write.insertInto(data_target, overwrite=True))
 
         send_status("DONE", method["name"], current_step_num=step_num)

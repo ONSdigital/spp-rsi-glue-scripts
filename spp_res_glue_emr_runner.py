@@ -35,14 +35,12 @@ try:
         "environment",
         "pipeline",
         "run_id",
-        "run_id_column",
         "snapshot_location"
     ])
     bpm_queue_url = args["bpm_queue_url"]
     environment = args["environment"]
     pipeline = args["pipeline"]
     run_id = args["run_id"]
-    run_id_column = args["run_id_column"]
     snapshot_location = args["snapshot_location"]
 
     s3 = boto3.resource("s3", region_name="eu-west-2")
@@ -54,6 +52,7 @@ try:
     )
 
     methods = config["methods"]
+    run_id_column = config.get("run_id_column", "run_id")
     num_methods = len(methods)
 
     logger = general_functions.get_logger(

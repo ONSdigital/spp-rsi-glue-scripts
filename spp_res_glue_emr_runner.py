@@ -84,8 +84,10 @@ try:
     spark.sql("SET hive.exec.dynamic.partition.mode=nonstrict")
 
     send_status("IN PROGRESS", pipeline)
-
-    df = None
+    # The first method is expected to get its data location at runtime whereas
+    # subsequent methods must get their input from the output table of the
+    # previous method
+    data_location = None
     for method_num, method in enumerate(methods):
         # method_num is 0-indexed but we probably want step numbers
         # to be 1-indexed
@@ -100,21 +102,26 @@ try:
         if method.get("provide_session"):
             method_params["spark"] = spark
 
-        if df is not None:
-            if df.count() == 0:
-                raise RuntimeError(f"Found no rows in data frame")
-            method_params["df"] = df
+        if data_location is not None:
+            # Contains location of previous method's output
+            method_params["df"] = spark.table(data_location).filter(
+                pyspark.sql.functions.col("run_id") == run_id)
 
         module = importlib.import_module(method["module"])
-        df = getattr(module, method["name"])(**method_params)
+        output = getattr(module, method["name"])(**method_params)
 
-        data_target = method.get("data_target")
-        if data_target is not None:
+        if output.count() == 0:
+            raise RuntimeError(
+                f"{method['module']}.[method['name']} returned 0 rows")
+
+        data_location = method["data_target"]
+        if data_location is not None:
             # We need to select the relevant columns from the output
             # to support differing column orders and so that we get
             # only the columns we want in our output tables
-            df = df.select(spark.table(data_target).columns)
-            df.write.insertInto(data_target, overwrite=True)
+            (output.select(spark.table(data_location).columns)
+                .write.insertInto(data_location, overwrite=True)
+            )
 
         send_status("DONE", method["name"], current_step_num=step_num)
         logger.info("Method Finished: %s", method["name"])

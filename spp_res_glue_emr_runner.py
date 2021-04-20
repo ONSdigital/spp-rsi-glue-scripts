@@ -108,6 +108,7 @@ try:
                 pyspark.sql.functions.col("run_id") == run_id)
 
         module = importlib.import_module(method["module"])
+
         output = getattr(module, method["name"])(**method_params)
 
         if output.count() == 0:
@@ -115,12 +116,11 @@ try:
                 f"{method['module']}.{method['name']} returned 0 rows")
 
         data_location = method["data_target"]
-        if data_location is not None:
-            # We need to select the relevant columns from the output
-            # to support differing column orders and so that we get
-            # only the columns we want in our output tables
-            (output.select(spark.table(data_location).columns)
-                .write.insertInto(data_location, overwrite=True))
+        # We need to select the relevant columns from the output
+        # to support differing column orders and so that we get
+        # only the columns we want in our output tables
+        (output.select(spark.table(data_location).columns)
+            .write.insertInto(data_location, overwrite=True))
 
         send_status("DONE", method["name"], current_step_num=step_num)
         logger.info("Finished method %s.%s", method["module"], method["name"])

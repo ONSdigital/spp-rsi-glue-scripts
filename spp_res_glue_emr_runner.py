@@ -97,7 +97,7 @@ try:
             method["name"],
             current_step_num=step_num
         )
-
+        logger.info("Starting method %s.%s", method["module"], method["name"])
         method_params = method.get("params", {})
         if method.get("provide_session"):
             method_params["spark"] = spark
@@ -112,7 +112,7 @@ try:
 
         if output.count() == 0:
             raise RuntimeError(
-                f"{method['module']}.[method['name']} returned 0 rows")
+                f"{method['module']}.{method['name']} returned 0 rows")
 
         data_location = method["data_target"]
         if data_location is not None:
@@ -120,11 +120,10 @@ try:
             # to support differing column orders and so that we get
             # only the columns we want in our output tables
             (output.select(spark.table(data_location).columns)
-                .write.insertInto(data_location, overwrite=True)
-            )
+                .write.insertInto(data_location, overwrite=True))
 
         send_status("DONE", method["name"], current_step_num=step_num)
-        logger.info("Method Finished: %s", method["name"])
+        logger.info("Finished method %s.%s", method["module"], method["name"])
 
     send_status("DONE", pipeline)
 

@@ -106,8 +106,8 @@ try:
             method_params["df"] = df
 
         module = importlib.import_module(method["module"])
-        df = getattr(module, method["name"])(**method_params)
-
+        df = getattr(module, method["name"])(**method_params).persist()
+        logger.info("df query: %s", df._jdf.queryExecution().toString())
         data_target = method.get("data_target")
         if data_target is not None:
             # We need to select the relevant columns from the output

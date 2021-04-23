@@ -39,8 +39,8 @@ try:
     ])
     bpm_queue_url = args["bpm_queue_url"]
     environment = args["environment"]
-    run_id = args["run_id"]
     pipeline = args["pipeline"]
+    run_id = args["run_id"]
     snapshot_location = args["snapshot_location"]
 
     s3 = boto3.resource("s3", region_name="eu-west-2")
@@ -52,6 +52,7 @@ try:
     )
 
     methods = config["methods"]
+    run_id_column = config.get("run_id_column", "run_id")
     num_methods = len(methods)
 
     logger = general_functions.get_logger(
@@ -105,7 +106,7 @@ try:
         if data_location is not None:
             # Contains location of previous method's output
             method_params["df"] = spark.table(data_location).filter(
-                pyspark.sql.functions.col("run_id") == run_id)
+                pyspark.sql.functions.col(run_id_column) == run_id)
 
         module = importlib.import_module(method["module"])
 

@@ -17,16 +17,17 @@ pipeline = "unconfigured"
 run_id = None
 
 
-def send_status(status, module_name, current_step_num=None):
-    aws_functions.send_bpm_status(
-        bpm_queue_url,
-        module_name,
-        status,
-        run_id,
-        survey=pipeline,
-        current_step_num=current_step_num,
-        total_steps=num_methods,
-    )
+def send_status(status, module_name):
+    bpm_message = {
+        "bpm_id": run_id,
+        "status": {
+            "step_name": module_name,
+            "message": {},
+            "state": status
+        },
+    }
+    bpm_message = json.dumps(bpm_message)
+    send_sqs_message(queue_url, bpm_message, output_message_id, fifo=True)
 
 
 try:
@@ -123,10 +124,9 @@ try:
         (output.select(spark.table(data_location).columns)
             .write.insertInto(data_location, overwrite=True))
 
-        send_status("DONE", method["name"], current_step_num=step_num)
         logger.info("Finished method %s.%s", method["module"], method["name"])
 
-    send_status("DONE", pipeline)
+    send_status("FINISHED", pipeline)
 
 except Exception:
     if logger is None:

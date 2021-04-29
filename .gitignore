@@ -119,3 +119,5 @@ venv.bak/
 
 # Docker debugging with with VSCode (LU-5481)
 .devcontainer/
+# Editor backup files
+*~

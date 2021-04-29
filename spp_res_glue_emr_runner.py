@@ -1,31 +1,57 @@
 import boto3
 import importlib
+import immutables
 import json
 import pyspark.sql
+import spp_logger
 import sys
 from awsglue.utils import getResolvedOptions
-from es_aws_functions import aws_functions
-from es_aws_functions import general_functions
 
 
 bpm_queue_url = None
 component = "spp-results-emr-glue-runner"
 environment = "unconfigured"
 logger = None
-num_methods = 0
 pipeline = "unconfigured"
+region = "eu-west-2"
 run_id = None
 
 
-def send_status(status, module_name, current_step_num=None):
-    aws_functions.send_bpm_status(
-        bpm_queue_url,
-        module_name,
-        status,
-        run_id,
-        survey=pipeline,
-        current_step_num=current_step_num,
-        total_steps=num_methods,
+def send_status(status, module_name):
+    bpm_message = {
+        "bpm_id": run_id,
+        "status": {
+            "step_name": module_name,
+            "message": {},
+            "state": status
+        },
+    }
+    bpm_message = json.dumps(bpm_message)
+    sqs = boto3.client("sqs", region_name=region)
+    sqs.send_message(
+        QueueUrl=bpm_queue_url,
+        MessageBody=bpm_message,
+        MessageGroupId=run_id)
+
+
+def get_logger(survey, module_name, environment, run_id, log_level="INFO"):
+    # set the logger context attributes
+    main_context = immutables.Map(
+        log_correlation_id=run_id,
+        log_correlation_type=survey,
+        log_level=log_level
+    )
+    config = spp_logger.SPPLoggerConfig(
+        service="Results",
+        component=module_name,
+        environment=environment,
+        deployment=environment
+    )
+
+    return spp_logger.SPPLogger(
+        name="my_logger",
+        config=config,
+        context=main_context,
     )
 
 
@@ -43,7 +69,7 @@ try:
     run_id = args["run_id"]
     snapshot_location = args["snapshot_location"]
 
-    s3 = boto3.resource("s3", region_name="eu-west-2")
+    s3 = boto3.resource("s3", region_name=region)
     config = json.load(
         s3.Object(
             f"spp-res-{environment}-config",
@@ -53,9 +79,7 @@ try:
 
     methods = config["methods"]
     run_id_column = config.get("run_id_column", "run_id")
-    num_methods = len(methods)
-
-    logger = general_functions.get_logger(
+    logger = get_logger(
         pipeline,
         component,
         environment,
@@ -89,15 +113,10 @@ try:
     # subsequent methods must get their input from the output table of the
     # previous method
     data_location = None
-    for method_num, method in enumerate(methods):
-        # method_num is 0-indexed but we probably want step numbers
-        # to be 1-indexed
-        step_num = method_num + 1
-        send_status(
-            "IN PROGRESS",
-            method["name"],
-            current_step_num=step_num
-        )
+
+    for method in methods:
+        send_status("IN PROGRESS", method["name"])
+
         logger.info("Starting method %s.%s", method["module"], method["name"])
         method_params = method.get("params", {})
         if method.get("provide_session"):
@@ -123,20 +142,21 @@ try:
         (output.select(spark.table(data_location).columns)
             .write.insertInto(data_location, overwrite=True))
 
-        send_status("DONE", method["name"], current_step_num=step_num)
         logger.info("Finished method %s.%s", method["module"], method["name"])
 
-    send_status("DONE", pipeline)
+    send_status("FINISHED", pipeline)
 
 except Exception:
     if logger is None:
-        logger = general_functions.get_logger(
+        logger = get_logger(
             pipeline,
             component,
             environment,
-            None
+            run_id
         )
 
     logger.exception("Exception occurred in glue job")
-    send_status("ERROR", pipeline)
+    if bpm_queue_url is not None:
+        send_status("ERROR", pipeline)
+
     sys.exit(1)

@@ -1,10 +1,10 @@
 import boto3
 import importlib
+import immutables
 import json
 import pyspark.sql
 import sys
 from awsglue.utils import getResolvedOptions
-from es_aws_functions import general_functions
 
 
 bpm_queue_url = None
@@ -34,6 +34,27 @@ def send_status(status, module_name):
         MessageGroupId=run_id)
 
 
+def get_logger(survey, module_name, environment, run_id, log_level="INFO"):
+    # set the logger context attributes
+    main_context = immutables.Map(
+        log_correlation_id=run_id,
+        log_correlation_type=survey,
+        log_level=log_level
+    )
+    config = spp_logger.SPPLoggerConfig(
+        service="Results",
+        component=module_name,
+        environment=environment,
+        deployment=environment
+    )
+
+    return spp_logger.SPPLogger(
+        name="my_logger",
+        config=config,
+        context=main_context,
+    )
+
+
 try:
     args = getResolvedOptions(sys.argv, [
         "bpm_queue_url",
@@ -60,7 +81,7 @@ try:
     run_id_column = config.get("run_id_column", "run_id")
     num_methods = len(methods)
 
-    logger = general_functions.get_logger(
+    logger = get_logger(
         pipeline,
         component,
         environment,
@@ -134,7 +155,7 @@ try:
 
 except Exception:
     if logger is None:
-        logger = general_functions.get_logger(
+        logger = get_logger(
             pipeline,
             component,
             environment,

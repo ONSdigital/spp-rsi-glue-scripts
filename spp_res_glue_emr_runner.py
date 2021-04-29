@@ -4,7 +4,6 @@ import json
 import pyspark.sql
 import sys
 from awsglue.utils import getResolvedOptions
-from es_aws_functions import aws_functions
 from es_aws_functions import general_functions
 
 
@@ -14,6 +13,7 @@ environment = "unconfigured"
 logger = None
 num_methods = 0
 pipeline = "unconfigured"
+region = "eu-west-2"
 run_id = None
 
 
@@ -27,7 +27,11 @@ def send_status(status, module_name):
         },
     }
     bpm_message = json.dumps(bpm_message)
-    send_sqs_message(queue_url, bpm_message, output_message_id, fifo=True)
+    sqs = boto3.client("sqs", region_name=region)
+    sqs.send_message(
+        QueueUrl=queue_url,
+        MessageBody=bpm_message,
+        MessageGroupId=run_id)
 
 
 try:
@@ -44,7 +48,7 @@ try:
     run_id = args["run_id"]
     snapshot_location = args["snapshot_location"]
 
-    s3 = boto3.resource("s3", region_name="eu-west-2")
+    s3 = boto3.resource("s3", region_name=region)
     config = json.load(
         s3.Object(
             f"spp-res-{environment}-config",

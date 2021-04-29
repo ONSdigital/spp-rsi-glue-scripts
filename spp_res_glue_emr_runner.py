@@ -3,6 +3,7 @@ import importlib
 import immutables
 import json
 import pyspark.sql
+import spp_logger
 import sys
 from awsglue.utils import getResolvedOptions
 
@@ -11,7 +12,6 @@ bpm_queue_url = None
 component = "spp-results-emr-glue-runner"
 environment = "unconfigured"
 logger = None
-num_methods = 0
 pipeline = "unconfigured"
 region = "eu-west-2"
 run_id = None
@@ -29,7 +29,7 @@ def send_status(status, module_name):
     bpm_message = json.dumps(bpm_message)
     sqs = boto3.client("sqs", region_name=region)
     sqs.send_message(
-        QueueUrl=queue_url,
+        QueueUrl=bpm_queue_url,
         MessageBody=bpm_message,
         MessageGroupId=run_id)
 
@@ -79,8 +79,6 @@ try:
 
     methods = config["methods"]
     run_id_column = config.get("run_id_column", "run_id")
-    num_methods = len(methods)
-
     logger = get_logger(
         pipeline,
         component,
@@ -115,15 +113,10 @@ try:
     # subsequent methods must get their input from the output table of the
     # previous method
     data_location = None
-    for method_num, method in enumerate(methods):
-        # method_num is 0-indexed but we probably want step numbers
-        # to be 1-indexed
-        step_num = method_num + 1
-        send_status(
-            "IN PROGRESS",
-            method["name"],
-            current_step_num=step_num
-        )
+
+    for method in methods:
+        send_status("IN PROGRESS", method["name"])
+
         logger.info("Starting method %s.%s", method["module"], method["name"])
         method_params = method.get("params", {})
         if method.get("provide_session"):
@@ -159,9 +152,11 @@ except Exception:
             pipeline,
             component,
             environment,
-            None
+            run_id
         )
 
     logger.exception("Exception occurred in glue job")
-    send_status("ERROR", pipeline)
+    if bpm_queue_url is not None:
+        send_status("ERROR", pipeline)
+
     sys.exit(1)
